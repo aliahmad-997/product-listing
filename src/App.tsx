@@ -12,9 +12,12 @@ function App() {
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error loading products</div>;
 
-  const filteredProducts = filter
-    ? products.filter((p) => p.colour === filter)
-    : products;
+  const colors = products.map((p) => p.colour);
+
+  const filteredProducts =
+    filter && filter !== "None"
+      ? products.filter((p) => p.colour === filter)
+      : products;
 
   return (
     <div className="container mx-auto p-4">
@@ -25,18 +28,18 @@ function App() {
         </div>
       </div>
       <div className="mb-4">
-        <button
-          onClick={() => setFilter("Black")}
-          className="mr-2 p-2 bg-slate-100 rounded-md"
+        <label htmlFor="color-filter">Color Filter:</label>
+
+        <select
+          onChange={(e) => setFilter(e.currentTarget.value)}
+          name="color-filter"
+          id="color-filter"
         >
-          Show Black Items
-        </button>
-        <button
-          className="p-2 bg-slate-100 rounded-md"
-          onClick={() => setFilter(null)}
-        >
-          Show All Items
-        </button>
+          {colors.map((colour) => (
+            <option value={colour}>{colour}</option>
+          ))}
+          <option value="None">None</option>
+        </select>
       </div>
       <ProductList products={filteredProducts} />
     </div>

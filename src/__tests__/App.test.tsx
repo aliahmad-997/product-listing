@@ -78,12 +78,17 @@ describe("App Component", () => {
 
     expect(screen.getByText("Total: $0.00")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("Show Black Items"));
+    const colorFilter = screen.getByLabelText("Color Filter:");
+    fireEvent.change(colorFilter, { target: { value: "Black" } });
 
-    expect(screen.queryByText("Black Dress")).toBeInTheDocument();
+    expect(screen.getByText("Black Dress")).toBeInTheDocument();
     expect(screen.queryByText("Red Dress")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("Show All Items"));
+    fireEvent.change(colorFilter, { target: { value: "Red" } });
+    expect(screen.getByText("Red Dress")).toBeInTheDocument();
+    expect(screen.queryByText("Black Dress")).not.toBeInTheDocument();
+
+    fireEvent.change(colorFilter, { target: { value: "None" } });
 
     expect(screen.getByText("Black Dress")).toBeInTheDocument();
     expect(screen.getByText("Red Dress")).toBeInTheDocument();
@@ -103,6 +108,9 @@ describe("App Component", () => {
     const addButton = screen.getAllByText("+")[0];
     fireEvent.click(addButton);
     fireEvent.click(addButton);
+
+    const quantity = screen.getAllByText("2")[0];
+    expect(quantity).toBeInTheDocument();
 
     expect(screen.getByText("Total: $20.00")).toBeInTheDocument();
 
