@@ -1,29 +1,40 @@
 import "@testing-library/jest-dom";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "../App";
 import { useFetchProducts } from "../api/use-fetch-products";
-import { useCart } from "../hooks";
+import { CartProvider } from "../contexts/cart-context";
 
 jest.mock("../api/use-fetch-products");
-jest.mock("../hooks");
+
+const mockProducts = [
+  {
+    id: 1,
+    name: "Black Dress",
+    price: 10,
+    img: "https://via.placeholder.com/150",
+    colour: "Black",
+  },
+  {
+    id: 2,
+    name: "Red Dress",
+    price: 20,
+    img: "https://via.placeholder.com/150",
+    colour: "Red",
+  },
+];
+
+const queryClient = new QueryClient();
 
 describe("App Component", () => {
-  const mockProducts = [
-    {
-      id: 1,
-      name: "Black Dress",
-      price: 10,
-      img: "https://via.placeholder.com/150",
-      colour: "Black",
-    },
-    {
-      id: 2,
-      name: "Red Dress",
-      price: 20,
-      img: "https://via.placeholder.com/150",
-      colour: "Red",
-    },
-  ];
+  const setup = () =>
+    render(
+      <QueryClientProvider client={queryClient}>
+        <CartProvider>
+          <App />
+        </CartProvider>
+      </QueryClientProvider>
+    );
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -36,9 +47,7 @@ describe("App Component", () => {
       error: null,
     });
 
-    (useCart as jest.Mock).mockReturnValue({ total: 0 });
-
-    render(<App />);
+    setup();
 
     expect(screen.getByText("Loading...")).toBeInTheDocument();
   });
@@ -50,9 +59,7 @@ describe("App Component", () => {
       error: "Error loading products",
     });
 
-    (useCart as jest.Mock).mockReturnValue({ total: 0 });
-
-    render(<App />);
+    setup();
 
     expect(screen.getByText("Error loading products")).toBeInTheDocument();
   });
@@ -64,29 +71,69 @@ describe("App Component", () => {
       error: null,
     });
 
-    (useCart as jest.Mock).mockReturnValue({ total: 30, cart: new Map() });
+    setup();
 
-    render(<App />);
+    expect(screen.getByText("Black Dress")).toBeInTheDocument();
+    expect(screen.getByText("Red Dress")).toBeInTheDocument();
 
-    await waitFor(() => {
-      expect(screen.getByText("Black Dress")).toBeInTheDocument();
-      expect(screen.getByText("Red Dress")).toBeInTheDocument();
-    });
-
-    expect(screen.getByText("Total: $30.00")).toBeInTheDocument();
+    expect(screen.getByText("Total: $0.00")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Show Black Items"));
 
-    await waitFor(() => {
-      expect(screen.queryByText("Black Dress")).toBeInTheDocument();
-      expect(screen.queryByText("Red Dress")).not.toBeInTheDocument();
-    });
+    expect(screen.queryByText("Black Dress")).toBeInTheDocument();
+    expect(screen.queryByText("Red Dress")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Show All Items"));
 
-    await waitFor(() => {
-      expect(screen.getByText("Black Dress")).toBeInTheDocument();
-      expect(screen.getByText("Red Dress")).toBeInTheDocument();
+    expect(screen.getByText("Black Dress")).toBeInTheDocument();
+    expect(screen.getByText("Red Dress")).toBeInTheDocument();
+  });
+
+  test("should render and interact with add and decrement buttons", async () => {
+    (useFetchProducts as jest.Mock).mockReturnValue({
+      data: mockProducts,
+      isLoading: false,
+      error: null,
     });
+
+    setup();
+
+    expect(screen.getByText("Product Listings")).toBeInTheDocument();
+
+    const addButton = screen.getAllByText("+")[0];
+    fireEvent.click(addButton);
+    fireEvent.click(addButton);
+
+    expect(screen.getByText("Total: $20.00")).toBeInTheDocument();
+
+    const decrementButton = screen.getAllByText("-")[0];
+    fireEvent.click(decrementButton);
+
+    expect(screen.getByText("Total: $10.00")).toBeInTheDocument();
+
+    fireEvent.click(decrementButton);
+    expect(screen.getByText("Total: $0.00")).toBeInTheDocument();
+  });
+
+  test("should render and remove the product from cart with remove button", async () => {
+    (useFetchProducts as jest.Mock).mockReturnValue({
+      data: mockProducts,
+      isLoading: false,
+      error: null,
+    });
+
+    setup();
+
+    expect(screen.getByText("Product Listings")).toBeInTheDocument();
+
+    const addButton = screen.getAllByText("+")[0];
+    fireEvent.click(addButton);
+
+    expect(screen.getByText("Total: $10.00")).toBeInTheDocument();
+
+    const removeButton = screen.getAllByText("Remove")[0];
+    fireEvent.click(removeButton);
+
+    expect(screen.getByText("Total: $0.00")).toBeInTheDocument();
   });
 });
